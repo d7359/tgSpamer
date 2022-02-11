@@ -55,7 +55,7 @@ class API {
 				return this.call(method, params, options);
 			}
 
-			return Promise.reject(error);
+			return Promise.resolve(error);
 		}
 	}
 }
