@@ -31,13 +31,19 @@ class Spammer{
 
 		let contacts = []
 
+		console.log(req.body)
+		console.log({project:req.body.project, status:'active'})
+
 		return TgAccounts.getAllByCondition({project:req.body.project, status:'active'}, result=>{
-			if(result.data.length===0){
+
+			console.log(result)
+
+			if(result.error || result.length===0){
 
 				return callback({status:'ok'})
 			}
 
-			async.eachSeries(result.data, (row, rowCallback)=>{
+			async.eachSeries(result, (row, rowCallback)=>{
 					this.parseContacts(row.phone, req.body, result=>{
 						console.log(result)
 
