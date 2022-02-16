@@ -41,6 +41,10 @@ const schemaEvents = new Schema({
 		type: String,
 		// required:   true,
 	},
+	project: {
+		type: String,
+		// required:   true,
+	},
 	status:{
 		type: String,
 		enum:[

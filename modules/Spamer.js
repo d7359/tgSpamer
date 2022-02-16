@@ -31,37 +31,49 @@ class Spammer{
 
 		let contacts = []
 
-		async.eachSeries(Object.keys(this.accounts), (phone, phoneCallback)=>{
-				this.parseContacts(phone, req.body, result=>{
-					console.log(result)
+		return TgAccounts.getAllByCondition({project:req.body.project, status:'active'}, result=>{
+			if(result.data.length===0){
 
-					if(contacts.length===0){
-						contacts = result.contacts
+				return callback({status:'ok'})
+			}
+
+			async.eachSeries(result.data, (row, rowCallback)=>{
+					this.parseContacts(row.phone, req.body, result=>{
+						console.log(result)
+
+						if(contacts.length===0){
+							contacts = result.contacts
+						}
+
+						return setTimeout(()=>{rowCallback()}, 1000)
+					})
+				},
+				err=>{
+					if(err){
+						console.error(err)
 					}
 
-					return setTimeout(()=>{phoneCallback()}, 1000)
+					return callback({status:'ok'})
+
+					// return request({
+					// 	url:'https://pay.telegramer.bot/save_contacts',
+					// 	method:'POST',
+					// 	headers:{'Content-Type':'application/json'},
+					// 	body:JSON.stringify({contacts, parsingId:req.body.parsingId, project:req.body.project})
+					// }, (error,  httpResponse, body)=>{
+					// 	console.error(error)
+					// 	// console.log(httpResponse)
+					// 	console.log(body)
+					//
+					// 	return callback({status:'ok'})
+					// })
+
+
 				})
-			},
-			err=>{
-				if(err){
-					console.error(err)
-				}
 
-				// return request({
-				// 	url:'https://go.geeko.tech/save_contacts',
-				// 	method:'POST',
-				// 	headers:{'Content-Type':'application/json'},
-				// 	body:JSON.stringify({contacts, parsingId:req.body.parsingId, project:req.body.project})
-				// }, (error,  httpResponse, body)=>{
-				// 	console.error(error)
-				// 	// console.log(httpResponse)
-				// 	console.log(body)
-				//
-				// 	return callback({status:'ok'})
-				// })
+		})
 
 
-			})
 	}
 
 	sleep(ms) {
@@ -734,7 +746,7 @@ class Spammer{
 
 		console.log(accounts)
 
-		let result = await TgAccounts.create({phone: req.body.phone, api_id: req.body.api_id, api_hash:req.body.api_hash, status:'draft'})
+		let result = await TgAccounts.create({phone: req.body.phone, api_id: req.body.api_id, api_hash:req.body.api_hash, project:req.body.project, status:'draft'})
 
 		console.log(result)
 
@@ -1129,7 +1141,7 @@ class Spammer{
 	sendRequest(data){
 		return new Promise(resolve => {
 			return request({
-				url:'https://go.geeko.tech/mailing_callbacks',
+				url:'https://pay.telegramer.bot/mailing_callbacks',
 				method:'POST',
 				headers:{'Content-Type':'application/json'},
 				body:JSON.stringify(data)
