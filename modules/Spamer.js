@@ -29,6 +29,8 @@ class Spammer{
 
 	parseContactsAll(req, callback){
 
+		console.log('parseContactsAll')
+
 		let contacts = []
 
 		console.log(req.body)

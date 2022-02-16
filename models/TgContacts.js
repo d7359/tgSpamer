@@ -25,7 +25,7 @@ const schemaEvents = new Schema({
 	id: {
 		type: String,
 		required: true,
-		index:{unique:true, background:false}
+		// index:{unique:true, background:false}
 	},
 	access_hash:{
 		type:String,
