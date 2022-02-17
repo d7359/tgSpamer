@@ -95,8 +95,10 @@ class Spammer{
 		let invite = false;
 		let chat_users = []
 
+		const hash = data.hash.replace('https://','').replace('http://','').replace('t.me/joinchat/','').replace('t.me/+','').replace('t.me/','')
+
 		// try {
-			invite = await this.accounts[phone].call('messages.importChatInvite', {hash: data.hash})
+			invite = await this.accounts[phone].call('messages.importChatInvite', {hash: hash})
 			// const invite = await API.call('messages.importChatInvite',{hash:'lcHhKERxZg4wOWYy'})
 
 			console.log('invite:', invite)
@@ -105,7 +107,7 @@ class Spammer{
 			if(invite.error_code){
 				if(invite.error_message && invite.error_message ==='USER_ALREADY_PARTICIPANT'){
 					const checkChatInvite = await this.accounts[phone].call('messages.checkChatInvite', {
-						hash:data.hash,
+						hash:hash,
 						// limit:10
 					})
 
@@ -127,7 +129,7 @@ class Spammer{
 				}
 
 				const search = await this.accounts[phone].call('contacts.search', {
-					q:'@'+data.hash.replace('@',''),
+					q:'@'+hash.replace('@',''),
 					limit:10
 				})
 
@@ -141,11 +143,17 @@ class Spammer{
 					return callback({status:'error', msg:'Ничего не найдено'})
 				}
 
+				const searched = search.chats.find(el=>el.username===hash.replace('@',''))
+
+				if(!searched){
+					return callback({status:'error', msg:'Ничего не найдено'})
+				}
+
 				const joinChannel = await this.accounts[phone].call('channels.joinChannel', {
 					channel: {
 						_:'inputChannel',
-						channel_id:search.chats[0].id,
-						access_hash:search.chats[0].access_hash
+						channel_id:searched.id,
+						access_hash:searched.access_hash
 					}
 				})
 
@@ -158,8 +166,8 @@ class Spammer{
 					// _: 'inputPeerChannel',
 					_: 'inputPeerChannel',
 					// channel_id: channel.id,
-					channel_id: search.chats[0].id,
-					access_hash: search.chats[0].access_hash
+					channel_id: searched.id,
+					access_hash: searched.access_hash
 				};
 
 				console.log(inputPeer)
@@ -262,8 +270,8 @@ class Spammer{
 				const leaveChannel = await this.accounts[phone].call('channels.leaveChannel', {
 					channel:{
 						_:'inputChannel',
-						channel_id: search.chats[0].id,
-						access_hash: search.chats[0].access_hash
+						channel_id: searched.id,
+						access_hash: searched.access_hash
 					}
 				})
 			}
