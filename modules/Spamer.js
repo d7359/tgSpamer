@@ -273,7 +273,7 @@ class Spammer{
 
 				while(peerUsers.length>0) {
 
-					const getUsers = await API.call('users.getUsers', {
+					const getUsers = await this.accounts[phone].call('users.getUsers', {
 						id: Object.values(peerUsers)
 					})
 
@@ -592,7 +592,7 @@ class Spammer{
 
 			while(peerUsers.length>0) {
 
-				const getUsers = await API.call('users.getUsers', {
+				const getUsers = await this.accounts[phone].call('users.getUsers', {
 					id: Object.values(peerUsers)
 				})
 
