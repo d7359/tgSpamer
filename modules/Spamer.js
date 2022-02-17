@@ -967,7 +967,7 @@ class Spammer{
 			return async.eachSeries(tasks, (task, taskCallback)=>{
 					(async ()=>{
 
-						const contacts = await TgContacts.getAllByCondition({id:task.data.user.id})
+						const contacts = await TgContacts.getAllByCondition({id:task.data.user.id, tg_account:task.data.phone})
 
 						console.log(contacts)
 
