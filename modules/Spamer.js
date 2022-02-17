@@ -149,15 +149,15 @@ class Spammer{
 					return callback({status:'error', msg:'Ничего не найдено'})
 				}
 
-				const joinChannel = await this.accounts[phone].call('channels.joinChannel', {
-					channel: {
-						_:'inputChannel',
-						channel_id:searched.id,
-						access_hash:searched.access_hash
-					}
-				})
-
-				console.log('chat:', joinChannel)
+				// const joinChannel = await this.accounts[phone].call('channels.joinChannel', {
+				// 	channel: {
+				// 		_:'inputChannel',
+				// 		channel_id:searched.id,
+				// 		access_hash:searched.access_hash
+				// 	}
+				// })
+				//
+				// console.log('chat:', joinChannel)
 
 
 				const users = {}
@@ -259,21 +259,53 @@ class Spammer{
 					}
 				}
 
-				const getUsers = await this.accounts[phone].call('users.getUsers', {
-					id:Object.values(users)
-				})
+				// const getUsers = await this.accounts[phone].call('users.getUsers', {
+				// 	id:Object.values(users)
+				// })
 
-				console.log(getUsers);
+				let start =0
+				let end = 200
+				let peerUsers = Object.values(users).slice(start,end)
 
-				chat_users = getUsers
+				console.log('peerUsers:', peerUsers.length)
 
-				const leaveChannel = await this.accounts[phone].call('channels.leaveChannel', {
-					channel:{
-						_:'inputChannel',
-						channel_id: searched.id,
-						access_hash: searched.access_hash
-					}
-				})
+				let resultUsers =[]
+
+				while(peerUsers.length>0) {
+
+					const getUsers = await API.call('users.getUsers', {
+						id: Object.values(peerUsers)
+					})
+
+					await this.sleep(1000)
+
+					console.log(getUsers.length);
+
+					resultUsers = [...resultUsers, ...getUsers]
+
+					start+=200
+					end+=200
+
+
+					peerUsers = Object.values(users).slice(start,end)
+
+					console.log('peerUsers:', peerUsers.length)
+
+
+
+				}
+
+				console.log(resultUsers.length);
+
+				chat_users = resultUsers
+
+				// const leaveChannel = await this.accounts[phone].call('channels.leaveChannel', {
+				// 	channel:{
+				// 		_:'inputChannel',
+				// 		channel_id: searched.id,
+				// 		access_hash: searched.access_hash
+				// 	}
+				// })
 			}
 
 		// }
@@ -546,13 +578,45 @@ class Spammer{
 				}
 			}
 
-			const getUsers = await this.accounts[phone].call('users.getUsers', {
-				id:Object.values(users)
-			})
+			// const getUsers = await this.accounts[phone].call('users.getUsers', {
+			// 	id:Object.values(users)
+			// })
 
-			console.log(getUsers);
+			let start =0
+			let end = 200
+			let peerUsers = Object.values(users).slice(start,end)
 
-			chat_users = getUsers;
+			console.log('peerUsers:', peerUsers.length)
+
+			let resultUsers =[]
+
+			while(peerUsers.length>0) {
+
+				const getUsers = await API.call('users.getUsers', {
+					id: Object.values(peerUsers)
+				})
+
+				await this.sleep(1000)
+
+				console.log(getUsers.length);
+
+				resultUsers = [...resultUsers, ...getUsers]
+
+				start+=200
+				end+=200
+
+
+				peerUsers = Object.values(users).slice(start,end)
+
+				console.log('peerUsers:', peerUsers.length)
+
+
+
+			}
+
+			console.log(resultUsers.length);
+
+			chat_users = resultUsers;
 
 			const leaveChannel = await this.accounts[phone].call('channels.leaveChannel', {
 				channel:{
