@@ -45,6 +45,13 @@ class Spammer{
 				return callback({status:'ok'})
 			}
 
+			return Promise.all(result.map(async row => await this.parseContacts(row.phone, req.body, ()=>{})))
+				.then(values=>{
+
+					return callback({status:'ok'})
+
+				})
+
 			async.eachSeries(result, (row, rowCallback)=>{
 					this.parseContacts(row.phone, req.body, result=>{
 						console.log(result)
@@ -92,6 +99,10 @@ class Spammer{
 
 	async parseContacts(phone, data, callback){
 
+		return new Promise(async resolve=>{
+
+
+
 		let invite = false;
 		let chat_users = []
 
@@ -136,17 +147,17 @@ class Spammer{
 				console.log(search);
 
 				if(search.error_code){
-					return callback({status:'error', msg:'Ничего не найдено'})
+					return resolve({status:'error', msg:'Ничего не найдено'})
 				}
 
 				if(search.chats.length===0){
-					return callback({status:'error', msg:'Ничего не найдено'})
+					return resolve({status:'error', msg:'Ничего не найдено'})
 				}
 
 				const searched = search.chats.find(el=>el.username===hash.replace('@',''))
 
 				if(!searched){
-					return callback({status:'error', msg:'Ничего не найдено'})
+					return resolve({status:'error', msg:'Ничего не найдено'})
 				}
 
 				// const joinChannel = await this.accounts[phone].call('channels.joinChannel', {
@@ -183,7 +194,7 @@ class Spammer{
 				});
 
 				if(history.error_code){
-					return callback({status:'error', msg:'Ничего не найдено'})
+					return resolve({status:'error', msg:'Ничего не найдено'})
 				}
 
 
@@ -330,7 +341,7 @@ class Spammer{
 		// 				}
 		// 			})
 		//
-		// 			return this.parseContacts(phone, data, callback)
+		// 			return this.parseContacts(phone, data, resolve)
 		//
 		// 		}
 		// 	}
@@ -343,7 +354,7 @@ class Spammer{
 		// 	console.log(search);
 		//
 		// 	if(search.chats.length===0){
-		// 		return callback({status:'error', msg:'Ничего не найдено'})
+		// 		return resolve({status:'error', msg:'Ничего не найдено'})
 		// 	}
 		//
 		// 	const joinChannel = await this.accounts[phone].call('channels.joinChannel', {
@@ -506,7 +517,7 @@ class Spammer{
 			});
 
 			if(history.error_code){
-				return callback({status:'error', msg:'Ничего не найдено'})
+				return resolve({status:'error', msg:'Ничего не найдено'})
 			}
 			await this.sleep(1000)
 			// console.log(firstHistoryResult)
@@ -686,13 +697,13 @@ class Spammer{
 
 				console.log(result)
 
-				return callback({status: 'ok', contacts})
+				return resolve({status: 'ok', contacts})
 			})
 
 		})
 
 
-
+		})
 
 	}
 
