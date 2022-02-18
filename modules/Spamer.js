@@ -48,6 +48,8 @@ class Spammer{
 			return Promise.all(result.map(async row => await this.parseContacts(row.phone, req.body, ()=>{})))
 				.then(values=>{
 
+					console.log(values)
+
 					return callback({status:'ok'})
 
 				})
@@ -787,35 +789,35 @@ class Spammer{
 			}
 
 			this.accounts[account.phone].mtproto.updates.on('updatesTooLong', (updateInfo) => {
-				console.log('updatesTooLong:', updateInfo);
+				// console.log('updatesTooLong:', updateInfo);
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updateShortMessage', async (updateInfo) => {
-				console.log('updateShortMessage:', updateInfo);
+				// console.log('updateShortMessage:', updateInfo);
 
 				await callbackTasksController.create({execute_time:moment().format('YYYY-MM-DD HH:mm:ss'), data: {phone:account.phone, user:{id:updateInfo.user_id},incomingMessage:true}})
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updateShortChatMessage', async (updateInfo) => {
-				console.log('updateShortChatMessage:', updateInfo);
+				// console.log('updateShortChatMessage:', updateInfo);
 
 
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updateShort', (updateInfo) => {
-				console.log('updateShort:', updateInfo);
+				// console.log('updateShort:', updateInfo);
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updatesCombined', (updateInfo) => {
-				console.log('updatesCombined:', updateInfo);
+				// console.log('updatesCombined:', updateInfo);
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updates', async (updateInfo) => {
-				console.log('updates:', updateInfo);
+				// console.log('updates:', updateInfo);
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updateShortSentMessage', (updateInfo) => {
-				console.log('updateShortSentMessage:', updateInfo);
+				// console.log('updateShortSentMessage:', updateInfo);
 			});
 
 			return resolve();
@@ -1050,14 +1052,159 @@ class Spammer{
 			return async.eachSeries(tasks, (task, taskCallback)=>{
 					(async ()=>{
 
-						const contacts = await TgContacts.getAllByCondition({id:task.data.user.id, tg_account:task.data.phone})
-
-						console.log(contacts)
-
 						const callbackTask = {
 							data:task.data,
 							execute_time: moment().format('YYYY-MM-DD HH:mm:ss')
 						}
+
+						callbackTask.data.type = 'status'
+
+						if(task.data.testing){
+
+							if(task.data.answer){
+								const sendMessage = await this.accounts[task.data.phone].call('messages.sendMessage', {
+									peer	:{
+										_: 'inputPeerUser',
+										user_id: task.data.user.id,
+										access_hash: task.data.user.access_hash
+									},
+									message: task.data.message,
+									random_id:	Math.ceil(Math.random() * 0xffffff) + Math.ceil(Math.random() * 0xffffff),
+									// phone:	user.phone ||''
+								})
+
+								console.log('sendMessage:', sendMessage)
+
+
+								callbackTask.data.sent = true
+								success_ids.push(task._id.toString())
+
+								callbackTasks.push(callbackTask)
+
+								return setTimeout(()=>{taskCallback()})
+							}
+
+
+							const deleteByPhones = await this.accounts[task.data.phone].call('contacts.deleteByPhones', {
+								// _:'inputPhoneContact',
+								phones:task.data.user.phone_number.replace('+', '')
+							})
+
+							console.log('deleteByPhones:',deleteByPhones)
+
+
+							const importContacts = await this.accounts[task.data.phone].call('contacts.importContacts', {
+								// _:'inputPhoneContact',
+								contacts:[{
+									_         : 'inputPhoneContact',
+									// 		client_id : Math.ceil(Math.random() * 0xffffff) + Math.ceil(Math.random() * 0xffffff),
+									client_id : task.data.user.user_id,
+									first_name: task.data.user.first_name || '',
+									last_name : task.data.user.last_name || '',
+									phone     : task.data.user.phone_number ? task.data.user.phone_number.replace('+', '') : ''
+								}]
+							})
+
+							console.log('importContacts:',importContacts)
+
+
+							let user;
+
+							if(importContacts.users.length>0) {
+								user = importContacts.users[0];
+							}
+
+							if(importContacts.users.length===0 && !msg.chat.username) {
+
+								callbackTask.data.sent = false
+								callbackTask.data.error_code = 1
+								failure_ids.push(task._id.toString())
+
+								callbackTasks.push(callbackTask)
+
+								return setTimeout(()=>{taskCallback()})
+
+							}
+
+							if(importContacts.users.length===0 && task.data.user.username) {
+
+
+								const search = await this.accounts[task.data.phone].call('contacts.search', {
+									q:'@'+task.data.user.username,
+									limit:30
+								})
+
+								console.log(search);
+
+								if(search.users===0) {
+
+									callbackTask.data.sent = false
+									callbackTask.data.error_code = 2
+									failure_ids.push(task._id.toString())
+
+									callbackTasks.push(callbackTask)
+
+									return setTimeout(()=>{taskCallback()})
+								}
+
+								const searched = search.users.find(el=>el.username===task.data.user.username)
+
+								if(!searched){
+									callbackTask.data.sent = false
+									callbackTask.data.error_code = 3
+									failure_ids.push(task._id.toString())
+
+									callbackTasks.push(callbackTask)
+
+									return setTimeout(()=>{taskCallback()})
+								}
+
+								user = searched
+							}
+
+							const sendMessage = await this.accounts[task.data.phone].call('messages.sendMessage', {
+								peer	:{
+									_: 'inputPeerUser',
+									user_id: user.id,
+									access_hash: user.access_hash
+								},
+								message:	task.data.user.first_name+', привет !  Если ты видишь это сообщение, то тестирование рассылки от Telegramer BOT прошло успешно. \n' +
+									'\n' +
+									'Но есть ещё кое-что. \n' +
+									'\n' +
+									'Хочешь продолжить ? \n' +
+									'\n' +
+									'Отправь мне любой текст в ответ.',
+								random_id:	Math.ceil(Math.random() * 0xffffff) + Math.ceil(Math.random() * 0xffffff),
+								// phone:	user.phone ||''
+							})
+
+							console.log('sendMessage:', sendMessage)
+
+							if(sendMessage._!=='updateShortSentMessage'){
+								callbackTask.data.sent = false
+								callbackTask.data.error_code = 4
+								failure_ids.push(task._id.toString())
+
+								callbackTasks.push(callbackTask)
+
+								return setTimeout(()=>{taskCallback()})
+							}
+
+							callbackTask.data.sent = true
+							success_ids.push(task._id.toString())
+
+							callbackTasks.push(callbackTask)
+
+							return setTimeout(()=>{taskCallback()})
+						}
+
+
+						const contacts = await TgContacts.getAllByCondition({id:task.data.user.id, tg_account:task.data.phone})
+
+						console.log(contacts)
+
+
 
 						if(!contacts || !contacts[0] || !contacts[0].access_hash){
 							callbackTask.sent = false
@@ -1073,7 +1220,7 @@ class Spammer{
 						let d = await this.sendMessage(task.data)
 
 
-						callbackTask.data.type = 'status'
+
 
 						if(d.status==='ok'){
 							callbackTask.sent = true
@@ -1209,7 +1356,7 @@ class Spammer{
 				// phone:	user.phone ||''
 			})
 
-			console.log('sendMessageasd: ', addContact)
+			console.log('sendMessageasd: ', sendMessage)
 
 			if(sendMessage._!=='updateShortSentMessage'){
 
