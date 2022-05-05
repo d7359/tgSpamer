@@ -286,11 +286,15 @@ class Spammer{
 
 				while(peerUsers.length>0) {
 
-					const getUsers = await this.accounts[phone].call('users.getUsers', {
+					let getUsers = await this.accounts[phone].call('users.getUsers', {
 						id: Object.values(peerUsers)
 					})
 
 					await this.sleep(1000)
+
+					if(getUsers.error_code){
+						getUsers = []
+					}
 
 					console.log(getUsers.length);
 
@@ -605,11 +609,15 @@ class Spammer{
 
 			while(peerUsers.length>0) {
 
-				const getUsers = await this.accounts[phone].call('users.getUsers', {
+				let getUsers = await this.accounts[phone].call('users.getUsers', {
 					id: Object.values(peerUsers)
 				})
 
 				await this.sleep(1000)
+
+				if(getUsers.error_code){
+					getUsers = []
+				}
 
 				console.log(getUsers.length);
 
@@ -793,7 +801,7 @@ class Spammer{
 			});
 
 			this.accounts[account.phone].mtproto.updates.on('updateShortMessage', async (updateInfo) => {
-				// console.log('updateShortMessage:', updateInfo);
+				console.log('updateShortMessage:', updateInfo);
 
 				await callbackTasksController.create({execute_time:moment().format('YYYY-MM-DD HH:mm:ss'), data: {phone:account.phone, user:{id:updateInfo.user_id},incomingMessage:true}})
 			});
@@ -1059,6 +1067,61 @@ class Spammer{
 
 						callbackTask.data.type = 'status'
 
+						if(task.data.user.imported){
+							const importContact = await this.importContact(task.data.user, task.data.phone)
+
+							if(importContact.status==='error'){
+								callbackTask.sent = false
+								failure_ids.push(task._id.toString())
+
+								callbackTasks.push(callbackTask)
+
+								return setTimeout(()=>{taskCallback()}, 1000)
+							}
+						}
+
+
+						const contacts = await TgContacts.getAllByCondition({id:task.data.user.id, tg_account:task.data.phone})
+
+						console.log("contacts:")
+						console.log(contacts)
+
+
+
+						if((!contacts || !contacts[0] || !contacts[0].access_hash) && !task.data.user.username){
+							callbackTask.sent = false
+							failure_ids.push(task._id.toString())
+
+							callbackTasks.push(callbackTask)
+
+							return setTimeout(()=>{taskCallback()}, 1000)
+						}
+
+
+						if((!contacts || !contacts[0] || !contacts[0].access_hash) && task.data.user.username){
+							const importContact = await this.importContact(task.data.user, task.data.phone)
+
+							console.log("importContact:")
+							console.log(importContact)
+
+							if(importContact.status==='error'){
+								callbackTask.sent = false
+								failure_ids.push(task._id.toString())
+
+								callbackTasks.push(callbackTask)
+
+								return setTimeout(()=>{taskCallback()}, 1000)
+							}
+
+							task.data.user.access_hash = importContact.contact.access_hash
+						}
+
+
+
+						if(contacts && contacts[0] && contacts[0].access_hash) {
+							task.data.user.access_hash = contacts[0].access_hash
+						}
+
 						if(task.data.testing){
 
 							if(task.data.answer){
@@ -1162,6 +1225,22 @@ class Spammer{
 								user = searched
 							}
 
+
+							TgContacts.create({
+								id:user.id,
+								access_hash:user.access_hash,
+								first_name:user.first_name || '',
+								last_name:user.last_name || '',
+								username:user.username || '',
+								phone:user.phone || '',
+								tg_account:task.data.phone
+							}, result=>{
+
+
+								console.log(result)
+
+							})
+
 							const sendMessage = await this.accounts[task.data.phone].call('messages.sendMessage', {
 								peer	:{
 									_: 'inputPeerUser',
@@ -1201,60 +1280,7 @@ class Spammer{
 
 
 
-						if(task.data.user.imported){
-							const importContact = await this.importContact(task.data.user, task.data.phone)
 
-							if(importContact.status==='error'){
-								callbackTask.sent = false
-								failure_ids.push(task._id.toString())
-
-								callbackTasks.push(callbackTask)
-
-								return setTimeout(()=>{taskCallback()}, 1000)
-							}
-						}
-
-
-						const contacts = await TgContacts.getAllByCondition({id:task.data.user.id, tg_account:task.data.phone})
-
-						console.log("contacts:")
-						console.log(contacts)
-
-
-
-						if((!contacts || !contacts[0] || !contacts[0].access_hash) && !task.data.user.username){
-							callbackTask.sent = false
-							failure_ids.push(task._id.toString())
-
-							callbackTasks.push(callbackTask)
-
-							return setTimeout(()=>{taskCallback()}, 1000)
-						}
-
-
-						if((!contacts || !contacts[0] || !contacts[0].access_hash) && task.data.user.username){
-							const importContact = await this.importContact(task.data.user, task.data.phone)
-
-							console.log("importContact:")
-							console.log(importContact)
-
-							if(importContact.status==='error'){
-								callbackTask.sent = false
-								failure_ids.push(task._id.toString())
-
-								callbackTasks.push(callbackTask)
-
-								return setTimeout(()=>{taskCallback()}, 1000)
-							}
-
-							task.data.user.access_hash = importContact.contact.access_hash
-						}
-
-
-
-						if(contacts && contacts[0] && contacts[0].access_hash) {
-							task.data.user.access_hash = contacts[0].access_hash
-						}
 
 						let d = await this.sendMessage(task.data)
 
